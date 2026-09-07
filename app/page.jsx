@@ -11,12 +11,16 @@ export default function Home() {
   const [style, setStyle] = useState("Cinematic");
 
   const handleGenerate = () => {
-    if (!product) {
+    if (!product.trim()) {
       alert("Masukkan nama produk terlebih dahulu.");
       return;
     }
 
-    alert("F&B AI STUDIO siap digunakan!");
+    alert(
+      `F&B AI STUDIO\n\nProduk: ${product}\nBrand: ${
+        brand || "-"
+      }\nHarga: ${price || "-"}\nJenis: ${contentType}\nDurasi: ${duration} detik\nStyle: ${style}`
+    );
   };
 
   return (
@@ -34,7 +38,7 @@ export default function Home() {
           margin: "0 auto",
         }}
       >
-        <div
+        <section
           style={{
             background: "#111827",
             color: "white",
@@ -43,22 +47,37 @@ export default function Home() {
             marginBottom: "18px",
           }}
         >
-          <div style={{ fontSize: "13px", opacity: 0.7 }}>
+          <div
+            style={{
+              fontSize: "13px",
+              opacity: 0.7,
+              letterSpacing: "1px",
+            }}
+          >
             AI CONTENT CREATOR
           </div>
 
-          <h1 style={{ margin: "8px 0" }}>
+          <h1
+            style={{
+              margin: "8px 0",
+              fontSize: "28px",
+            }}
+          >
             🍔 F&B AI STUDIO
           </h1>
 
-          <p style={{ opacity: 0.8 }}>
+          <p
+            style={{
+              opacity: 0.8,
+              marginBottom: "15px",
+            }}
+          >
             Dari foto makanan jadi konten AI.
           </p>
 
           <div
             style={{
               display: "inline-block",
-              marginTop: "10px",
               padding: "8px 14px",
               background: "#ffffff22",
               borderRadius: "20px",
@@ -66,15 +85,24 @@ export default function Home() {
           >
             🪙 20 Kredit
           </div>
-        </div>
+        </section>
 
-        <div
+        <section
           style={{
             background: "white",
             padding: "22px",
             borderRadius: "22px",
           }}
         >
+          <h2
+            style={{
+              marginTop: 0,
+              marginBottom: "20px",
+            }}
+          >
+            Buat Konten Baru
+          </h2>
+
           <label>📸 Foto Produk</label>
 
           <div
@@ -92,12 +120,14 @@ export default function Home() {
             <p>Upload foto makanan</p>
 
             <button
+              type="button"
               style={{
                 padding: "10px 18px",
                 border: "none",
                 borderRadius: "10px",
                 background: "#111827",
                 color: "white",
+                cursor: "pointer",
               }}
             >
               Pilih Foto
@@ -144,4 +174,44 @@ export default function Home() {
             <option>Restaurant Promo</option>
             <option>Food Cinematic</option>
             <option>Cooking Video</option>
-            <option>Drama F&B
+            <option>Drama F&B</option>
+          </select>
+
+          <label>Durasi</label>
+
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="5">5 detik</option>
+            <option value="10">10 detik</option>
+            <option value="15">15 detik</option>
+            <option value="30">30 detik</option>
+            <option value="60">60 detik</option>
+          </select>
+
+          <label>Style Visual</label>
+
+          <select
+            value={style}
+            onChange={(e) => setStyle(e.target.value)}
+            style={inputStyle}
+          >
+            <option>Cinematic</option>
+            <option>Hyper Realistic</option>
+            <option>Luxury Food</option>
+            <option>Street Food</option>
+            <option>Korean Food</option>
+            <option>Japanese Food</option>
+            <option>3D Animation</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            style={{
+              width: "100%",
+              marginTop: "15px",
+              padding: "16px",
+             
