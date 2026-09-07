@@ -219,5 +219,6 @@ export default function Home() {
           <label>Harga Produk</label>
 
           <input
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+  value={price}
+  onChange={(e) => setPrice(e.target.value)}
+/>
