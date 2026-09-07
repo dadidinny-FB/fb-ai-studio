@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -9,6 +9,8 @@ const supabase = createClient(
 );
 
 export default function Home() {
+  const fileInputRef = useRef(null);
+
   const [product, setProduct] = useState("");
   const [brand, setBrand] = useState("");
   const [price, setPrice] = useState("");
@@ -16,198 +18,185 @@ export default function Home() {
   const [duration, setDuration] = useState("10");
   const [style, setStyle] = useState("Cinematic");
 
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadedPath, setUploadedPath] = useState("");
   const [message, setMessage] = useState("");
 
-  function handleFileChange(e) {
-    const selectedFile = e.target.files?.[0];
+  function choosePhoto() {
+    fileInputRef.current?.click();
+  }
 
-    if (!selectedFile) return;
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
 
-    if (!selectedFile.type.startsWith("image/")) {
-      alert("Silakan pilih file gambar.");
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("File harus berupa gambar.");
       return;
     }
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      alert("Ukuran foto maksimal 10 MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage("Ukuran foto maksimal 10 MB.");
       return;
     }
 
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
-    setMessage("");
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setUploadedPath("");
+    setMessage("Foto siap di-upload.");
   }
 
   async function uploadPhoto() {
-    if (!file) {
-      alert("Silakan pilih foto terlebih dahulu.");
-      return null;
+    if (!imageFile) {
+      setMessage("Pilih foto terlebih dahulu.");
+      return;
     }
 
     setUploading(true);
-    setMessage("");
+    setMessage("Sedang meng-upload foto...");
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2)}.${fileExt}`;
+    try {
+      const extension = imageFile.name.split(".").pop() || "jpg";
 
-    const filePath = `products/${fileName}`;
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}.${extension}`;
 
-    const { error } = await supabase.storage
-      .from("product-images")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      const filePath = `products/${fileName}`;
 
-    if (error) {
+      const { error } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, imageFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: imageFile.type,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      setUploadedPath(filePath);
+      setMessage("✅ Foto berhasil disimpan ke Supabase!");
+    } catch (error) {
       console.error(error);
+      setMessage(`❌ Upload gagal: ${error.message}`);
+    } finally {
       setUploading(false);
-      setMessage("❌ Upload gagal: " + error.message);
-      return null;
     }
-
-    setUploading(false);
-    setMessage("✅ Foto berhasil diupload ke Supabase.");
-
-    return filePath;
   }
 
-  async function generate() {
+  function generateContent() {
     if (!product.trim()) {
       alert("Masukkan nama produk terlebih dahulu.");
       return;
     }
 
-    if (!file) {
-      alert("Silakan upload foto produk terlebih dahulu.");
+    if (!imageFile) {
+      alert("Pilih foto produk terlebih dahulu.");
       return;
     }
 
-    const uploadedPath = await uploadPhoto();
+    if (!uploadedPath) {
+      alert("Upload foto terlebih dahulu.");
+      return;
+    }
 
-    if (!uploadedPath) return;
-
-    alert(
-      "🎉 Foto berhasil disimpan!\n\nTahap berikutnya kita akan membuat AI Generator."
-    );
+    alert("Data siap diproses AI. Tahap AI Generator akan kita sambungkan berikutnya.");
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f5f5f5",
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "600px",
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            background: "#111827",
-            color: "white",
-            padding: "25px",
-            borderRadius: "22px",
-            marginBottom: "18px",
-          }}
-        >
+    <main style={pageStyle}>
+      <div style={containerStyle}>
+
+        <section style={headerStyle}>
           <div style={{ fontSize: "13px", opacity: 0.7 }}>
             AI CONTENT CREATOR
           </div>
 
-          <h1 style={{ margin: "8px 0" }}>
+          <h1 style={{ margin: "8px 0", fontSize: "30px" }}>
             🍔 F&B AI STUDIO
           </h1>
 
-          <p style={{ opacity: 0.8 }}>
+          <p style={{ opacity: 0.8, marginBottom: "12px" }}>
             Dari foto makanan jadi konten AI.
           </p>
 
-          <div
-            style={{
-              display: "inline-block",
-              marginTop: "10px",
-              padding: "8px 14px",
-              background: "#ffffff22",
-              borderRadius: "20px",
-            }}
-          >
+          <div style={creditStyle}>
             🪙 20 Kredit
           </div>
-        </div>
+        </section>
 
-        <div
-          style={{
-            background: "white",
-            padding: "22px",
-            borderRadius: "22px",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Buat Konten Baru</h2>
+        <section style={cardStyle}>
+
+          <h2 style={{ marginTop: 0 }}>
+            Buat Konten Baru
+          </h2>
 
           <label>📸 Foto Produk</label>
 
-          <div
-            style={{
-              border: "2px dashed #ccc",
-              borderRadius: "15px",
-              padding: "25px",
-              textAlign: "center",
-              marginTop: "8px",
-              marginBottom: "18px",
-            }}
-          >
-            {preview ? (
-              <img
-                src={preview}
-                alt="Preview produk"
-                style={{
-                  width: "100%",
-                  maxHeight: "300px",
-                  objectFit: "contain",
-                  borderRadius: "12px",
-                  marginBottom: "15px",
-                }}
-              />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+
+          <div style={uploadBoxStyle}>
+
+            {imagePreview ? (
+              <>
+                <img
+                  src={imagePreview}
+                  alt="Preview produk"
+                  style={previewStyle}
+                />
+
+                <button
+                  onClick={choosePhoto}
+                  style={smallButtonStyle}
+                >
+                  Ganti Foto
+                </button>
+              </>
             ) : (
               <>
-                <div style={{ fontSize: "40px" }}>📷</div>
+                <div style={{ fontSize: "45px" }}>📷</div>
+
                 <p>Upload foto makanan</p>
+
+                <button
+                  onClick={choosePhoto}
+                  style={darkButtonStyle}
+                >
+                  Pilih Foto
+                </button>
               </>
             )}
 
-            <input
-              id="photo"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
-
-            <label
-              htmlFor="photo"
-              style={{
-                display: "inline-block",
-                padding: "10px 18px",
-                borderRadius: "10px",
-                background: "#111827",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {file ? "Ganti Foto" : "Pilih Foto"}
-            </label>
           </div>
+
+          {imageFile && !uploadedPath && (
+            <button
+              onClick={uploadPhoto}
+              disabled={uploading}
+              style={uploadButtonStyle}
+            >
+              {uploading
+                ? "⏳ Meng-upload..."
+                : "☁️ Upload Foto ke Supabase"}
+            </button>
+          )}
+
+          {message && (
+            <div style={messageStyle}>
+              {message}
+            </div>
+          )}
 
           <label>Nama Produk</label>
 
@@ -232,103 +221,3 @@ export default function Home() {
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="Contoh: Rp15.000"
-            style={inputStyle}
-          />
-
-          <label>Jenis Konten</label>
-
-          <select
-            value={contentType}
-            onChange={(e) => setContentType(e.target.value)}
-            style={inputStyle}
-          >
-            <option>Video TikTok</option>
-            <option>Instagram Reels</option>
-            <option>Video Affiliate</option>
-            <option>Restaurant Promo</option>
-            <option>Food Cinematic</option>
-            <option>Cooking Video</option>
-            <option>Drama F&B</option>
-          </select>
-
-          <label>Durasi</label>
-
-          <select
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="5">5 detik</option>
-            <option value="10">10 detik</option>
-            <option value="15">15 detik</option>
-            <option value="30">30 detik</option>
-            <option value="60">60 detik</option>
-          </select>
-
-          <label>Style Visual</label>
-
-          <select
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-            style={inputStyle}
-          >
-            <option>Cinematic</option>
-            <option>Hyper Realistic</option>
-            <option>Luxury Food</option>
-            <option>Street Food</option>
-            <option>Korean Food</option>
-            <option>Japanese Food</option>
-            <option>3D Animation</option>
-          </select>
-
-          {message && (
-            <div
-              style={{
-                marginTop: "10px",
-                padding: "12px",
-                background: "#f3f4f6",
-                borderRadius: "10px",
-                fontSize: "14px",
-              }}
-            >
-              {message}
-            </div>
-          )}
-
-          <button
-            onClick={generate}
-            disabled={uploading}
-            style={generateButton}
-          >
-            {uploading ? "⏳ UPLOAD..." : "🚀 GENERATE CONTENT"}
-          </button>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "13px",
-  marginTop: "8px",
-  marginBottom: "15px",
-  borderRadius: "10px",
-  border: "1px solid #d1d5db",
-  fontSize: "15px",
-};
-
-const generateButton = {
-  width: "100%",
-  marginTop: "15px",
-  padding: "16px",
-  border: "none",
-  borderRadius: "14px",
-  background: "#111827",
-  color: "white",
-  fontSize: "17px",
-  fontWeight: "bold",
-  cursor: "pointer",
-};
