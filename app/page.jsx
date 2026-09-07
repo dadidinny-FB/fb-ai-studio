@@ -46,7 +46,10 @@ export default function Home() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+
   const [result, setResult] = useState("");
+  const [generatedImage, setGeneratedImage] = useState("");
 
   function chooseFile(e) {
     const selectedFile = e.target.files?.[0];
@@ -86,9 +89,7 @@ export default function Home() {
           upsert: false,
         });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       return fileName;
     } catch (error) {
@@ -150,20 +151,65 @@ export default function Home() {
       }
 
       setResult(data.content || "");
+      setMessage("✅ Konten AI berhasil dibuat!");
+    } catch (error) {
+      console.error(error);
 
       setMessage(
-        "✅ Konten AI berhasil dibuat!"
+        "❌ " +
+          (error?.message || "Terjadi kesalahan.")
       );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function generateImage() {
+    if (!product.trim()) {
+      alert("Masukkan nama produk terlebih dahulu.");
+      return;
+    }
+
+    try {
+      setImageLoading(true);
+      setGeneratedImage("");
+      setMessage("🎨 AI sedang membuat gambar produk...");
+
+      const response = await fetch("/api/image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product,
+          brand,
+          price,
+          style,
+          prompt:
+            "Buat foto makanan profesional untuk iklan media sosial.",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Gagal membuat gambar AI."
+        );
+      }
+
+      setGeneratedImage(data.image || "");
+      setMessage("✅ Gambar AI berhasil dibuat!");
     } catch (error) {
       console.error(error);
 
       setMessage(
         "❌ " +
           (error?.message ||
-            "Terjadi kesalahan.")
+            "Terjadi kesalahan saat membuat gambar.")
       );
     } finally {
-      setLoading(false);
+      setImageLoading(false);
     }
   }
 
@@ -174,8 +220,7 @@ export default function Home() {
         background:
           "linear-gradient(180deg,#f8fafc,#eef2ff)",
         padding: "20px",
-        fontFamily:
-          "Arial,Helvetica,sans-serif",
+        fontFamily: "Arial,Helvetica,sans-serif",
       }}
     >
       <div
@@ -243,14 +288,11 @@ export default function Home() {
             borderRadius: "24px",
           }}
         >
-
           <h2>🎬 Buat Konten AI</h2>
 
           {/* FOTO */}
 
-          <label>
-            📸 Foto Produk
-          </label>
+          <label>📸 Foto Produk</label>
 
           <input
             ref={fileInputRef}
@@ -300,7 +342,11 @@ export default function Home() {
               </>
             ) : (
               <>
-                <div style={{ fontSize: "45px" }}>
+                <div
+                  style={{
+                    fontSize: "45px",
+                  }}
+                >
                   📷
                 </div>
 
@@ -362,7 +408,7 @@ export default function Home() {
             style={inputStyle}
           />
 
-          {/* CONTENT TYPE */}
+          {/* JENIS KONTEN */}
 
           <label>🎥 Jenis Konten</label>
 
@@ -436,7 +482,27 @@ export default function Home() {
             </div>
           )}
 
-          {/* GENERATE */}
+          {/* AI IMAGE */}
+
+          <button
+            type="button"
+            onClick={generateImage}
+            disabled={imageLoading}
+            style={{
+              ...buttonStyle,
+              background:
+                "linear-gradient(135deg,#f59e0b,#ea580c)",
+              color: "white",
+              opacity: imageLoading ? 0.6 : 1,
+              marginBottom: "12px",
+            }}
+          >
+            {imageLoading
+              ? "🎨 AI Sedang Membuat Gambar..."
+              : "🖼️ GENERATE AI IMAGE"}
+          </button>
+
+          {/* AI CONTENT */}
 
           <button
             type="button"
@@ -455,7 +521,33 @@ export default function Home() {
               : "🚀 GENERATE CONTENT"}
           </button>
 
-          {/* HASIL AI */}
+          {/* GENERATED IMAGE */}
+
+          {generatedImage && (
+            <div
+              style={{
+                marginTop: "25px",
+                padding: "15px",
+                borderRadius: "16px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <h2>🖼️ Hasil Gambar AI</h2>
+
+              <img
+                src={generatedImage}
+                alt="AI Generated Food"
+                style={{
+                  width: "100%",
+                  borderRadius: "14px",
+                  display: "block",
+                }}
+              />
+            </div>
+          )}
+
+          {/* GENERATED CONTENT */}
 
           {result && (
             <div
@@ -467,9 +559,7 @@ export default function Home() {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <h2>
-                ✨ Hasil Konten AI
-              </h2>
+              <h2>✨ Hasil Konten AI</h2>
 
               <pre
                 style={{
@@ -485,8 +575,9 @@ export default function Home() {
               </pre>
             </div>
           )}
-
         </div>
+
+        {/* FOOTER */}
 
         <div
           style={{
