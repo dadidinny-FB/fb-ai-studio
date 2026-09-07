@@ -46,6 +46,7 @@ export default function Home() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
 
   function chooseFile(e) {
     const selectedFile = e.target.files?.[0];
@@ -53,10 +54,7 @@ export default function Home() {
     if (!selectedFile) return;
 
     setFile(selectedFile);
-
-    const imageUrl = URL.createObjectURL(selectedFile);
-    setPreview(imageUrl);
-
+    setPreview(URL.createObjectURL(selectedFile));
     setMessage("");
   }
 
@@ -71,8 +69,7 @@ export default function Home() {
     }
 
     try {
-      setLoading(true);
-      setMessage("⏳ Sedang mengupload foto...");
+      setMessage("⏳ Mengupload foto...");
 
       const extension =
         file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -93,8 +90,6 @@ export default function Home() {
         throw error;
       }
 
-      setMessage("✅ Foto berhasil disimpan ke Supabase.");
-
       return fileName;
     } catch (error) {
       console.error(error);
@@ -105,8 +100,6 @@ export default function Home() {
       );
 
       return null;
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -121,33 +114,57 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
-    setMessage("🤖 Menyiapkan konten AI...");
+    try {
+      setLoading(true);
+      setResult("");
+      setMessage("🤖 AI sedang membuat konten...");
 
-    const uploadedPath = await uploadPhoto();
+      const imagePath = await uploadPhoto();
 
-    if (!uploadedPath) {
+      if (!imagePath) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product,
+          brand,
+          price,
+          contentType,
+          duration,
+          style,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Gagal membuat konten AI."
+        );
+      }
+
+      setResult(data.content || "");
+
+      setMessage(
+        "✅ Konten AI berhasil dibuat!"
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "❌ " +
+          (error?.message ||
+            "Terjadi kesalahan.")
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const contentData = {
-      product,
-      brand,
-      price,
-      contentType,
-      duration,
-      style,
-      imagePath: uploadedPath,
-    };
-
-    console.log("CONTENT DATA:", contentData);
-
-    setMessage(
-      "✅ Data berhasil disiapkan. Tahap berikutnya kita hubungkan ke AI Generator."
-    );
-
-    setLoading(false);
   }
 
   return (
@@ -155,10 +172,10 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         background:
-          "linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)",
+          "linear-gradient(180deg,#f8fafc,#eef2ff)",
         padding: "20px",
         fontFamily:
-          "Arial, Helvetica, sans-serif",
+          "Arial,Helvetica,sans-serif",
       }}
     >
       <div
@@ -167,17 +184,17 @@ export default function Home() {
           margin: "0 auto",
         }}
       >
+
         {/* HEADER */}
+
         <div
           style={{
             background:
-              "linear-gradient(135deg, #111827, #374151)",
+              "linear-gradient(135deg,#111827,#374151)",
             color: "white",
             padding: "25px",
             borderRadius: "24px",
             marginBottom: "18px",
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.12)",
           }}
         >
           <div
@@ -199,24 +216,18 @@ export default function Home() {
             🍔 F&B AI STUDIO
           </h1>
 
-          <p
-            style={{
-              margin: 0,
-              opacity: 0.8,
-              fontSize: "15px",
-            }}
-          >
+          <p style={{ opacity: 0.8 }}>
             Dari Foto Makanan Jadi Konten Viral.
           </p>
 
           <div
             style={{
               display: "inline-block",
-              marginTop: "15px",
-              padding: "9px 15px",
-              background: "rgba(255,255,255,0.12)",
+              marginTop: "10px",
+              padding: "8px 14px",
+              background:
+                "rgba(255,255,255,0.12)",
               borderRadius: "20px",
-              fontSize: "14px",
             }}
           >
             🪙 20 Kredit
@@ -224,31 +235,20 @@ export default function Home() {
         </div>
 
         {/* FORM */}
+
         <div
           style={{
             background: "white",
             padding: "22px",
             borderRadius: "24px",
-            boxShadow:
-              "0 8px 25px rgba(0,0,0,0.08)",
           }}
         >
-          <h2
-            style={{
-              marginTop: 0,
-              fontSize: "21px",
-            }}
-          >
-            🎬 Buat Konten AI
-          </h2>
 
-          {/* UPLOAD FOTO */}
-          <label
-            style={{
-              fontWeight: "bold",
-              display: "block",
-            }}
-          >
+          <h2>🎬 Buat Konten AI</h2>
+
+          {/* FOTO */}
+
+          <label>
             📸 Foto Produk
           </label>
 
@@ -268,7 +268,6 @@ export default function Home() {
               textAlign: "center",
               marginTop: "8px",
               marginBottom: "20px",
-              background: "#f8fafc",
             }}
           >
             {preview ? (
@@ -294,7 +293,6 @@ export default function Home() {
                     borderRadius: "10px",
                     background: "#111827",
                     color: "white",
-                    fontWeight: "bold",
                   }}
                 >
                   🔄 Ganti Foto
@@ -302,19 +300,11 @@ export default function Home() {
               </>
             ) : (
               <>
-                <div
-                  style={{
-                    fontSize: "48px",
-                  }}
-                >
+                <div style={{ fontSize: "45px" }}>
                   📷
                 </div>
 
-                <p
-                  style={{
-                    color: "#64748b",
-                  }}
-                >
+                <p>
                   Upload foto makanan atau produk
                 </p>
 
@@ -325,7 +315,6 @@ export default function Home() {
                     ...buttonStyle,
                     background: "#111827",
                     color: "white",
-                    maxWidth: "220px",
                   }}
                 >
                   📁 Pilih Foto
@@ -334,68 +323,48 @@ export default function Home() {
             )}
           </div>
 
-          {/* NAMA PRODUK */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            🍔 Nama Produk
-          </label>
+          {/* PRODUK */}
+
+          <label>🍔 Nama Produk</label>
 
           <input
             value={product}
             onChange={(e) =>
               setProduct(e.target.value)
             }
-            placeholder="Contoh: Ayam Crispy"
+            placeholder="Contoh: Sop Iga Beremah"
             style={inputStyle}
           />
 
           {/* BRAND */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            🏪 Nama Brand
-          </label>
+
+          <label>🏪 Nama Brand</label>
 
           <input
             value={brand}
             onChange={(e) =>
               setBrand(e.target.value)
             }
-            placeholder="Contoh: Big Daddy's"
+            placeholder="Contoh: Gris House"
             style={inputStyle}
           />
 
           {/* HARGA */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            💰 Harga Produk
-          </label>
+
+          <label>💰 Harga Produk</label>
 
           <input
             value={price}
             onChange={(e) =>
               setPrice(e.target.value)
             }
-            placeholder="Contoh: Rp15.000"
+            placeholder="Contoh: Rp50.000"
             style={inputStyle}
           />
 
-          {/* JENIS KONTEN */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            🎥 Jenis Konten
-          </label>
+          {/* CONTENT TYPE */}
+
+          <label>🎥 Jenis Konten</label>
 
           <select
             value={contentType}
@@ -414,13 +383,8 @@ export default function Home() {
           </select>
 
           {/* DURASI */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            ⏱️ Durasi Video
-          </label>
+
+          <label>⏱️ Durasi Video</label>
 
           <select
             value={duration}
@@ -437,13 +401,8 @@ export default function Home() {
           </select>
 
           {/* STYLE */}
-          <label
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            🎨 Style Visual
-          </label>
+
+          <label>🎨 Style Visual</label>
 
           <select
             value={style}
@@ -461,7 +420,8 @@ export default function Home() {
             <option>3D Animation</option>
           </select>
 
-          {/* STATUS */}
+          {/* MESSAGE */}
+
           {message && (
             <div
               style={{
@@ -476,23 +436,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* UPLOAD */}
-          <button
-            type="button"
-            onClick={uploadPhoto}
-            disabled={loading}
-            style={{
-              ...buttonStyle,
-              background: "#16a34a",
-              color: "white",
-              marginBottom: "10px",
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            ☁️ Simpan Foto ke Supabase
-          </button>
-
           {/* GENERATE */}
+
           <button
             type="button"
             onClick={generateContent}
@@ -500,18 +445,49 @@ export default function Home() {
             style={{
               ...buttonStyle,
               background:
-                "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                "linear-gradient(135deg,#7c3aed,#4f46e5)",
               color: "white",
               opacity: loading ? 0.6 : 1,
             }}
           >
             {loading
-              ? "⏳ Memproses..."
+              ? "⏳ AI Sedang Bekerja..."
               : "🚀 GENERATE CONTENT"}
           </button>
+
+          {/* HASIL AI */}
+
+          {result && (
+            <div
+              style={{
+                marginTop: "25px",
+                padding: "20px",
+                borderRadius: "16px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <h2>
+                ✨ Hasil Konten AI
+              </h2>
+
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  fontFamily:
+                    "Arial,Helvetica,sans-serif",
+                  fontSize: "14px",
+                  lineHeight: "1.6",
+                }}
+              >
+                {result}
+              </pre>
+            </div>
+          )}
+
         </div>
 
-        {/* FOOTER */}
         <div
           style={{
             textAlign: "center",
@@ -522,6 +498,7 @@ export default function Home() {
         >
           F&B AI STUDIO © 2026
         </div>
+
       </div>
     </main>
   );
